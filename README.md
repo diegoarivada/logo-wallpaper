@@ -14,6 +14,16 @@ From a local copy of this folder, double click `install.bat` instead.
 
 The script finds Wallpaper Engine in any Steam library, puts the files in `projects\myprojects\diego-logo-live`, and switches to the wallpaper. It needs no admin rights. Run it again after pushing an edit to update the installed copy.
 
+## Still wallpapers
+
+The `wallpapers` folder has static PNG versions, each in dark and light, for screens without Wallpaper Engine.
+
+| Folder | Files | Size |
+|---|---|---|
+| `wallpapers/desktop` | `diego-logo-4k-dark.png`, `diego-logo-4k-light.png` | 3840x2160 |
+| `wallpapers/phone` | `diego-logo-phone-iphone-*.png` | 1320x2868 |
+| `wallpapers/phone` | `diego-logo-phone-android-*.png` | 1440x3200 |
+
 ## Options (Wallpaper Engine sidebar)
 
 24-hour clock, show seconds, show date, show day progress bar, clock size, particle network, and mouse parallax. The FPS limit in Wallpaper Engine's settings also caps the animation.
