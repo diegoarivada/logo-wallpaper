@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diego Logo Live</title>
+<style>
+  @font-face {
+    font-family: 'Rubik';
+    src: url('fonts/rubik.woff2') format('woff2');
+    font-weight: 300 900;
+    font-display: block;
+  }
+  :root {
+    --bg: #0b1220;
+    --blue: #0a66c2;
+    --red: #e63946;
+    --soft-blue: #7aa7ff;
+    --soft-red: #f0717f;
+    --text: #e8eef7;
+    --muted: #a5b4ca;
+    --clock-scale: 1;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+  body { font-family: 'Rubik', system-ui, sans-serif; color: var(--text); user-select: none; }
+
+  /* Drifting color glows */
+  .glow { position: fixed; border-radius: 50%; pointer-events: none; will-change: transform; }
+  .glow.blue {
+    width: 120vmax; height: 120vmax; left: -45vmax; top: -55vmax;
+    background: radial-gradient(closest-side, rgba(10,102,194,.42), rgba(10,102,194,0));
+    animation: drift-a 38s ease-in-out infinite alternate;
+  }
+  .glow.red {
+    width: 110vmax; height: 110vmax; right: -45vmax; bottom: -55vmax;
+    background: radial-gradient(closest-side, rgba(230,57,70,.34), rgba(230,57,70,0));
+    animation: drift-b 44s ease-in-out infinite alternate;
+  }
+  .glow.mid {
+    width: 70vmax; height: 70vmax; left: 50%; top: 50%; margin: -35vmax 0 0 -35vmax;
+    background: radial-gradient(closest-side, rgba(122,167,255,.08), rgba(122,167,255,0));
+    animation: breathe 12s ease-in-out infinite;
+  }
+  @keyframes drift-a { to { transform: translate(14vw, 10vh) scale(1.08); } }
+  @keyframes drift-b { to { transform: translate(-12vw, -8vh) scale(1.1); } }
+  @keyframes breathe { 50% { transform: scale(1.15); opacity: .6; } }
+
+  /* Dot grid that fades toward the edges */
+  .dots {
+    position: fixed; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,.07) 1.1px, transparent 1.6px);
+    background-size: 2.6vh 2.6vh;
+    -webkit-mask-image: radial-gradient(ellipse at center, #000 10%, transparent 70%);
+            mask-image: radial-gradient(ellipse at center, #000 10%, transparent 70%);
+  }
+
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+
+  /* Center logo */
+  .stage {
+    position: fixed; left: 50%; top: 50%; width: 29vh; height: 29vh;
+    transform: translate(-50%, -50%); will-change: transform;
+  }
+  .float { width: 100%; height: 100%; animation: float 7s ease-in-out infinite; }
+  @keyframes float { 50% { transform: translateY(-1.4vh); } }
+  .halo {
+    position: absolute; inset: -30%; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(122,100,200,.55), rgba(10,102,194,.18) 55%, transparent);
+    animation: pulse 5s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { transform: scale(1.12); opacity: .65; } }
+  .shadow {
+    position: absolute; left: 4%; right: 4%; top: 12%; bottom: -6%;
+    border-radius: 28%; background: rgba(0,0,0,.55); filter: blur(3vh);
+  }
+  .tile { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .orbit {
+    position: absolute; inset: -22%; width: 144%; height: 144%;
+    animation: spin 26s linear infinite;
+  }
+  .orbit.rev { inset: -34%; width: 168%; height: 168%; animation-duration: 40s; animation-direction: reverse; opacity: .7; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Clock */
+  .clock {
+    position: fixed; top: 5vh; right: 4vw; text-align: right;
+    transform: scale(var(--clock-scale)); transform-origin: top right;
+    text-shadow: 0 .4vh 3vh rgba(0,0,0,.45);
+    opacity: 0; transition: opacity 1.2s ease;
+  }
+  .clock.ready { opacity: 1; }
+  .time { display: flex; align-items: baseline; justify-content: flex-end; gap: .6vh; line-height: 1; }
+  .hm { font-size: 13vh; font-weight: 300; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .colon { animation: blink 2s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+  .side { display: flex; flex-direction: column; align-items: flex-start; gap: .5vh; margin-left: .8vh; }
+  .sec { font-size: 3.4vh; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ampm {
+    font-size: 2.6vh; font-weight: 600; letter-spacing: .12em;
+    background: linear-gradient(120deg, var(--soft-blue), var(--soft-red));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .date {
+    margin-top: 1.6vh; font-size: 2.2vh; font-weight: 500; letter-spacing: .32em; text-transform: uppercase;
+    background: linear-gradient(120deg, var(--soft-blue), var(--soft-red));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    padding-right: .1em;
+  }
+  .bar {
+    margin: 1.4vh 0 0 auto; height: .35vh; width: 22vh; border-radius: 1vh;
+    background: rgba(255,255,255,.08); overflow: hidden;
+  }
+  .bar i {
+    display: block; height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--blue), var(--red));
+    transition: width .9s linear;
+  }
+  .hide { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="glow blue"></div>
+  <div class="glow red"></div>
+  <div class="glow mid"></div>
+  <div class="dots" id="dots"></div>
+  <canvas id="net"></canvas>
+
+  <div class="stage" id="stage">
+    <div class="float">
+      <div class="halo"></div>
+      <svg class="orbit" viewBox="0 0 100 100" aria-hidden="true">
+        <defs>
+          <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7aa7ff" stop-opacity=".9"/>
+            <stop offset=".5" stop-color="#7aa7ff" stop-opacity="0"/>
+            <stop offset="1" stop-color="#f0717f" stop-opacity=".9"/>
+          </linearGradient>
+        </defs>
+        <circle cx="50" cy="50" r="48" fill="none" stroke="url(#ring)" stroke-width=".35"/>
+        <circle cx="50" cy="2" r="1.1" fill="#7aa7ff"/>
+        <circle cx="50" cy="98" r=".8" fill="#f0717f"/>
+      </svg>
+      <svg class="orbit rev" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,.12)" stroke-width=".2" stroke-dasharray="1 3"/>
+        <circle cx="98" cy="50" r=".7" fill="#e8eef7"/>
+      </svg>
+      <div class="shadow"></div>
+      <svg class="tile" viewBox="0 0 64 64" role="img" aria-label="Diego Rivada logo">
+        <defs>
+          <linearGradient id="dr-g" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#0a66c2"/><stop offset="1" stop-color="#e63946"/>
+          </linearGradient>
+          <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+            <stop offset=".5" stop-color="#fff" stop-opacity=".22"/>
+            <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+          </linearGradient>
+          <clipPath id="tile-clip"><rect width="64" height="64" rx="18"/></clipPath>
+        </defs>
+        <rect width="64" height="64" rx="18" fill="url(#dr-g)"/>
+        <!-- light sweep across the tile every few seconds -->
+        <g clip-path="url(#tile-clip)">
+          <rect x="-40" y="-20" width="24" height="110" fill="url(#shine)" transform="rotate(20)">
+            <animate attributeName="x" values="-60;-60;110" keyTimes="0;0.7;1" dur="9s" repeatCount="indefinite"/>
+          </rect>
+        </g>
+        <g fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="25.5" cy="40" r="10"/>
+          <path d="M36 14v36"/>
+          <path d="M36 42c0-8 4.5-12 12-12"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="clock" id="clock">
+    <div class="time">
+      <span class="hm"><span id="hh">--</span><span class="colon">:</span><span id="mm">--</span></span>
+      <span class="side">
+        <span class="ampm" id="ampm"></span>
+        <span class="sec" id="ss">--</span>
+      </span>
+    </div>
+    <div class="date" id="date"></div>
+    <div class="bar" id="bar"><i id="barfill"></i></div>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+  const settings = { use24h: false, seconds: true, date: true, bar: true, particles: true, parallax: true, fps: 30 };
+
+  /* ---------- Clock ---------- */
+  const $ = (id) => document.getElementById(id);
+  const pad = (n) => String(n).padStart(2, '0');
+  const dateFmt = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
+  function renderClock() {
+    const now = new Date();
+    let h = now.getHours();
+    if (!settings.use24h) {
+      $('ampm').textContent = h < 12 ? 'AM' : 'PM';
+      h = h % 12 || 12;
+      $('hh').textContent = String(h);
+    } else {
+      $('ampm').textContent = '';
+      $('hh').textContent = pad(h);
+    }
+    $('mm').textContent = pad(now.getMinutes());
+    $('ss').textContent = pad(now.getSeconds());
+    $('date').textContent = dateFmt.format(now).replace(/,/g, ' ·');
+    const dayPct = (now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) / 864;
+    $('barfill').style.width = dayPct.toFixed(2) + '%';
+  }
+  function tick() {
+    renderClock();
+    setTimeout(tick, 1000 - (Date.now() % 1000) + 5);
+  }
+  function applyVisibility() {
+    $('ss').classList.toggle('hide', !settings.seconds);
+    $('date').classList.toggle('hide', !settings.date);
+    $('bar').classList.toggle('hide', !settings.bar);
+    canvas.classList.toggle('hide', !settings.particles);
+    if (!settings.parallax) stage.style.transform = 'translate(-50%, -50%)';
+    renderClock();
+  }
+  document.fonts.load('300 1em Rubik').finally(() => $('clock').classList.add('ready'));
+
+  /* ---------- Particle network ---------- */
+  const canvas = $('net');
+  const ctx = canvas.getContext('2d');
+  const stage = $('stage');
+  let W = 0, H = 0, nodes = [], linkDist = 0;
+  const mouse = { x: -1e4, y: -1e4, tx: 0, ty: 0, px: 0, py: 0 };
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    W = innerWidth; H = innerHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    linkDist = Math.min(W, H) * 0.16;
+    const count = Math.round(Math.min(110, (W * H) / 26000));
+    nodes = Array.from({ length: count }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25,
+      r: Math.random() * 1.4 + .6,
+      tw: Math.random() * Math.PI * 2,
+    }));
+  }
+
+  // blue (#7aa7ff) -> red (#f0717f) across the screen
+  const mix = (t) => `${Math.round(122 + 118 * t)},${Math.round(167 - 54 * t)},${Math.round(255 - 128 * t)}`;
+
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2, keepOut = Math.min(W, H) * 0.22;
+    for (const n of nodes) {
+      n.x += n.vx; n.y += n.vy;
+      if (n.x < -20) n.x = W + 20; else if (n.x > W + 20) n.x = -20;
+      if (n.y < -20) n.y = H + 20; else if (n.y > H + 20) n.y = -20;
+      // gently push away from the logo and the cursor
+      for (const [px, py, rad, k] of [[cx, cy, keepOut, .02], [mouse.x, mouse.y, linkDist, .04]]) {
+        const dx = n.x - px, dy = n.y - py, d = Math.hypot(dx, dy);
+        if (d < rad && d > 0) { n.x += dx / d * (rad - d) * k; n.y += dy / d * (rad - d) * k; }
+      }
+    }
+    ctx.lineWidth = 1;
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i];
+      for (let j = i + 1; j < nodes.length; j++) {
+        const b = nodes[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < linkDist * linkDist) {
+          const alpha = (1 - Math.sqrt(d2) / linkDist) * .32;
+          ctx.strokeStyle = `rgba(${mix(((a.x + b.x) / 2) / W)},${alpha.toFixed(3)})`;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+    }
+    for (const n of nodes) {
+      const tw = .55 + .45 * Math.sin(t / 900 + n.tw);
+      ctx.fillStyle = `rgba(${mix(n.x / W)},${(.75 * tw).toFixed(3)})`;
+      ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  /* ---------- Parallax ---------- */
+  addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX; mouse.y = e.clientY;
+    mouse.tx = (e.clientX / W - .5) * 2; mouse.ty = (e.clientY / H - .5) * 2;
+  });
+  function parallax() {
+    if (!settings.parallax) return;
+    mouse.px += (mouse.tx - mouse.px) * .04;
+    mouse.py += (mouse.ty - mouse.py) * .04;
+    stage.style.transform = `translate(calc(-50% + ${(mouse.px * 1.2).toFixed(3)}vh), calc(-50% + ${(mouse.py * 1.2).toFixed(3)}vh))`;
+  }
+
+  /* ---------- Loop with FPS cap ---------- */
+  let last = 0;
+  function loop(t) {
+    requestAnimationFrame(loop);
+    if (t - last < 1000 / settings.fps - 1) return;
+    last = t;
+    if (settings.particles) draw(t);
+    parallax();
+  }
+
+  /* ---------- Wallpaper Engine properties ---------- */
+  window.wallpaperPropertyListener = {
+    applyUserProperties(p) {
+      if (p.use24h) settings.use24h = p.use24h.value;
+      if (p.showseconds) settings.seconds = p.showseconds.value;
+      if (p.showdate) settings.date = p.showdate.value;
+      if (p.showdaybar) settings.bar = p.showdaybar.value;
+      if (p.particles) settings.particles = p.particles.value;
+      if (p.parallax) settings.parallax = p.parallax.value;
+      if (p.clocksize) document.documentElement.style.setProperty('--clock-scale', p.clocksize.value / 100);
+      applyVisibility();
+    },
+    applyGeneralProperties(p) {
+      if (p.fps) settings.fps = Math.max(10, p.fps);
+    },
+  };
+
+  addEventListener('resize', resize);
+  resize();
+  applyVisibility();
+  tick();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
