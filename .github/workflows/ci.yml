@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: project.json is valid JSON
+        run: python3 -m json.tool project.json > /dev/null
+      - name: PowerShell lint
+        shell: pwsh
+        run: |
+          $issues = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error,Warning
+          $issues | Format-Table -AutoSize
+          if ($issues | Where-Object Severity -eq 'Error') { exit 1 }
